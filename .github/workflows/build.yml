@@ -1,0 +1,37 @@
+name: Flutter CI/CD Release APK
+
+# Triggers the workflow when a new tag like v1.0.0 is pushed
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build_and_release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      # NOTE: In a real app, you would sign your APK here using secrets.
+      # For this demo, we'll build the unsigned release APK.
+      - name: Build Android Release APK
+        run: flutter build apk --release
+
+      - name: Upload APK to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          # Use the tag name as the release name
+          name: Release ${{ github.ref_name }}
+          # Use the GITHUB_TOKEN automatically provided by GitHub Actions
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # Attach the generated APK file to the release
+          files: build/app/outputs/flutter-apk/app-release.apk
