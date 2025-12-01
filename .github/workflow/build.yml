@@ -1,0 +1,56 @@
+name: Build Flutter APK
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout repo
+      - uses: actions/checkout@v3
+
+      # 2️⃣ Setup Flutter
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      # 3️⃣ Get dependencies
+      - name: Get dependencies
+        run: flutter pub get
+
+      # 4️⃣ Read versionCode from pubspec.yaml
+      - name: Read versionCode
+        id: version
+        run: |
+          VERSION_CODE=$(grep -oP '(?<=\+)[0-9]+' pubspec.yaml)
+          echo "versionCode=$VERSION_CODE" >> $GITHUB_OUTPUT
+
+      # 5️⃣ Build APK
+      - name: Build APK
+        run: flutter build apk --release
+
+      # 6️⃣ Upload APK to GitHub Release
+      - name: Upload APK to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: latest
+          name: Latest Release
+          files: build/app/outputs/flutter-apk/app-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 7️⃣ Update latest.json automatically
+      - name: Update latest.json
+        run: |
+          echo '{
+            "versionCode": '"${{ steps.version.outputs.versionCode }}"',
+            "apk_url": "https://github.com/${{ github.repository }}/releases/latest/download/app-release.apk"
+          }' > latest.json
+          git add latest.json
+          git commit -m "Update latest.json to version ${{ steps.version.outputs.versionCode }}"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
