@@ -1,59 +1,32 @@
-name: Build Flutter APK
+name: Flutter CI Demo Build
 
-permissions:
-  contents: write
-  
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
   build:
+    name: Build APK
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout repo
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      # 2️⃣ Setup Flutter
-      - uses: subosito/flutter-action@v2
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          channel: 'stable'
 
-      # 3️⃣ Get dependencies
-      - name: Get dependencies
+      - name: Install dependencies
         run: flutter pub get
 
-      # 4️⃣ Read versionCode from pubspec.yaml
-      - name: Read versionCode
-        id: version
-        run: |
-          VERSION_CODE=$(grep -oP '(?<=\+)[0-9]+' pubspec.yaml)
-          echo "versionCode=$VERSION_CODE" >> $GITHUB_OUTPUT
-
-      # 5️⃣ Build APK
       - name: Build APK
         run: flutter build apk --release
 
-      # 6️⃣ Upload APK to GitHub Release
-      - name: Upload APK to Release
-        uses: softprops/action-gh-release@v1
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4  # <--- FIX APPLIED HERE
         with:
-          tag_name: latest
-          name: Latest Release
-          files: build/app/outputs/flutter-apk/app-release.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # 7️⃣ Update latest.json automatically
-      - name: Update latest.json
-        run: |
-          echo '{
-            "versionCode": '"${{ steps.version.outputs.versionCode }}"',
-            "apk_url": "https://github.com/${{ github.repository }}/releases/latest/download/app-release.apk"
-          }' > latest.json
-          git add latest.json
-          git commit -m "Update latest.json to version ${{ steps.version.outputs.versionCode }}"
-          git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
